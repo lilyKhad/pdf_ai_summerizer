@@ -6,15 +6,19 @@ An AI-powered Flutter app that lets you upload PDF documents and instantly get c
 
 ## 📸 Screenshots
 
-<img width="571" height="1280" alt="image" src="https://github.com/user-attachments/assets/2b415d00-320a-4cf2-9bc7-2cfc52a794e5" />
-<img width="571" height="1280" alt="image" src="https://github.com/user-attachments/assets/eb38b139-7900-4e8c-8f77-75f30d2aad1f" />
-<img width="571" height="1280" alt="image" src="https://github.com/user-attachments/assets/1dec3f0f-2a72-4ea5-bf87-3b0d23eec3f4" />
-<img width="571" height="1280" alt="image" src="https://github.com/user-attachments/assets/bfd8b88f-089c-4b84-860b-ddb52f4c4b54" />
-<img width="571" height="1280" alt="image" src="https://github.com/user-attachments/assets/3f5b3b87-ae73-456e-bd77-bc6001523247" />
-<img width="571" height="1280" alt="image" src="https://github.com/user-attachments/assets/db3d4c7a-92a6-4bf0-add2-57764c9465fc" />
-<img width="571" height="1280" alt="image" src="https://github.com/user-attachments/assets/936f9166-dbc8-45e2-93e2-1a7a9914a899" />
-
-
+<div align="center">
+<table>
+  <tr>
+    <td><img width="180" alt="screen1" src="https://github.com/user-attachments/assets/2b415d00-320a-4cf2-9bc7-2cfc52a794e5" /></td>
+    <td><img width="180" alt="screen2" src="https://github.com/user-attachments/assets/eb38b139-7900-4e8c-8f77-75f30d2aad1f" /></td>
+    <td><img width="180" alt="screen3" src="https://github.com/user-attachments/assets/1dec3f0f-2a72-4ea5-bf87-3b0d23eec3f4" /></td>
+    <td><img width="180" alt="screen4" src="https://github.com/user-attachments/assets/bfd8b88f-089c-4b84-860b-ddb52f4c4b54" /></td>
+    <td><img width="180" alt="screen5" src="https://github.com/user-attachments/assets/3f5b3b87-ae73-456e-bd77-bc6001523247" /></td>
+    <td><img width="180" alt="screen6" src="https://github.com/user-attachments/assets/db3d4c7a-92a6-4bf0-add2-57764c9465fc" /></td>
+    <td><img width="180" alt="screen7" src="https://github.com/user-attachments/assets/936f9166-dbc8-45e2-93e2-1a7a9914a899" /></td>
+  </tr>
+</table>
+</div>
 
 ---
 
