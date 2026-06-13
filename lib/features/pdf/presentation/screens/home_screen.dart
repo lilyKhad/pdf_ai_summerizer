@@ -17,7 +17,6 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
   @override
   void initState() {
     super.initState();
-    // Load once, safely, after the first frame
     WidgetsBinding.instance.addPostFrameCallback((_) {
       ref.read(documentProvider.notifier).loadDocuments();
     });
@@ -28,7 +27,6 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     final state = ref.watch(documentProvider);
     final auth = ref.watch(authProvider);
 
-    // Show errors from the document provider as snackbars
     ref.listen<DocumentState>(documentProvider, (_, next) {
       if (next.errorMessage != null) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -51,8 +49,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
         actions: [
           Container(
             margin: const EdgeInsets.only(right: 4),
-            padding:
-                const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
             decoration: BoxDecoration(
               color: AppTheme.surface,
               borderRadius: BorderRadius.circular(20),
@@ -78,8 +75,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
           IconButton(
             icon: const Icon(Icons.logout_rounded, size: 20),
             tooltip: 'Sign out',
-            onPressed: () =>
-                ref.read(authProvider.notifier).signOut(),
+            onPressed: () => ref.read(authProvider.notifier).signOut(),
           ),
         ],
       ),
@@ -103,13 +99,11 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
   }
 
   Widget _buildBody(BuildContext context, DocumentState state) {
-    // Still on first load — show spinner only
     if (!state.hasLoaded) {
       return const Center(
           child: CircularProgressIndicator(color: AppTheme.accent));
     }
 
-    // Loaded, empty list
     if (state.documents.isEmpty) {
       return Center(
         child: Column(
@@ -138,20 +132,17 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
             const SizedBox(height: 6),
             const Text(
               'Upload a PDF to get an AI summary',
-              style:
-                  TextStyle(color: AppTheme.textSecondary, fontSize: 14),
+              style: TextStyle(color: AppTheme.textSecondary, fontSize: 14),
             ),
           ],
         ),
       );
     }
 
-    // Has documents
     return RefreshIndicator(
       color: AppTheme.accent,
       backgroundColor: AppTheme.surface,
-      onRefresh: () =>
-          ref.read(documentProvider.notifier).loadDocuments(),
+      onRefresh: () => ref.read(documentProvider.notifier).loadDocuments(),
       child: ListView.separated(
         padding: const EdgeInsets.fromLTRB(16, 16, 16, 100),
         itemCount: state.documents.length,
@@ -169,7 +160,6 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
       allowedExtensions: ['pdf'],
     );
     if (result == null || result.files.single.path == null) return;
-
     await ref
         .read(documentProvider.notifier)
         .addDocument(result.files.single.path!);
@@ -177,7 +167,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
 }
 
 // ─────────────────────────────────────────
-// Document tile (unchanged logic, same design)
+// Document tile — redesigned with 2 action buttons
 // ─────────────────────────────────────────
 
 class _DocumentTile extends ConsumerWidget {
@@ -187,46 +177,148 @@ class _DocumentTile extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     return Card(
-      child: InkWell(
-        borderRadius: BorderRadius.circular(14),
-        onTap: doc.isDone
-            ? () => Navigator.pushNamed(context, '/summary',
-                arguments: doc.id)
-            : null,
-        child: Padding(
-          padding: const EdgeInsets.all(14),
-          child: Row(
-            children: [
-              _buildStatusIcon(),
-              const SizedBox(width: 14),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      doc.name,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: const TextStyle(
-                        color: AppTheme.textPrimary,
-                        fontWeight: FontWeight.w500,
-                        fontSize: 14,
+      child: Padding(
+        padding: const EdgeInsets.all(14),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // ── Top row: icon + name/size + delete ──
+            Row(
+              children: [
+                _buildStatusIcon(),
+                const SizedBox(width: 14),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        doc.name,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: const TextStyle(
+                          color: AppTheme.textPrimary,
+                          fontWeight: FontWeight.w500,
+                          fontSize: 14,
+                        ),
                       ),
-                    ),
-                    const SizedBox(height: 3),
-                    Text(
-                      '${doc.size.toStringAsFixed(2)} MB',
-                      style: const TextStyle(
-                          color: AppTheme.textSecondary, fontSize: 12),
-                    ),
-                  ],
+                      const SizedBox(height: 3),
+                      Text(
+                        '${doc.size.toStringAsFixed(2)} MB',
+                        style: const TextStyle(
+                            color: AppTheme.textSecondary, fontSize: 12),
+                      ),
+                    ],
+                  ),
                 ),
-              ),
-              _buildActions(context, ref),
-            ],
-          ),
+                // Delete button always visible
+                IconButton(
+                  icon: const Icon(Icons.delete_outline_rounded,
+                      color: AppTheme.textSecondary, size: 20),
+                  tooltip: 'Delete',
+                  onPressed: () => _confirmDelete(context, ref),
+                ),
+              ],
+            ),
+
+            // ── Bottom section: changes based on doc status ──
+            const SizedBox(height: 12),
+            _buildBottomSection(context, ref),
+          ],
         ),
       ),
+    );
+  }
+
+  Widget _buildBottomSection(BuildContext context, WidgetRef ref) {
+    // Still processing — show a progress bar
+    if (doc.isProcessing) {
+      return const LinearProgressIndicator(
+        color: AppTheme.accent,
+        backgroundColor: AppTheme.surfaceAlt,
+        borderRadius: BorderRadius.all(Radius.circular(4)),
+      );
+    }
+
+    // Error state — show retry button full width
+    if (doc.hasError) {
+      return SizedBox(
+        width: double.infinity,
+        child: OutlinedButton.icon(
+          onPressed: () =>
+              ref.read(documentProvider.notifier).summarizeDocument(doc.id),
+          icon: const Icon(Icons.refresh_rounded, size: 16),
+          label: const Text('Retry summarization'),
+          style: OutlinedButton.styleFrom(
+            foregroundColor: AppTheme.error,
+            side: const BorderSide(color: AppTheme.error),
+            shape:
+                RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+            padding: const EdgeInsets.symmetric(vertical: 10),
+          ),
+        ),
+      );
+    }
+
+    // Not yet summarized — show summarize button
+    if (!doc.isDone) {
+      return SizedBox(
+        width: double.infinity,
+        child: ElevatedButton.icon(
+          onPressed: () =>
+              ref.read(documentProvider.notifier).summarizeDocument(doc.id),
+          icon: const Icon(Icons.auto_awesome_rounded, size: 16),
+          label: const Text('Generate Summary'),
+          style: ElevatedButton.styleFrom(
+            shape:
+                RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+            padding: const EdgeInsets.symmetric(vertical: 10),
+          ),
+        ),
+      );
+    }
+
+    // Done — show the two big navigation buttons
+    return Row(
+      children: [
+        // Summary button
+        Expanded(
+          child: OutlinedButton.icon(
+            onPressed: () => Navigator.pushNamed(
+              context,
+              '/summary',
+              arguments: doc.id,
+            ),
+            icon: const Icon(Icons.article_outlined, size: 16),
+            label: const Text('Summary'),
+            style: OutlinedButton.styleFrom(
+              foregroundColor: AppTheme.textPrimary,
+              side: const BorderSide(color: AppTheme.border),
+              backgroundColor: AppTheme.surfaceAlt,
+              shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(10)),
+              padding: const EdgeInsets.symmetric(vertical: 10),
+            ),
+          ),
+        ),
+        const SizedBox(width: 10),
+        // Flashcards button
+        Expanded(
+          child: ElevatedButton.icon(
+            onPressed: () => Navigator.pushNamed(
+              context,
+              '/flashcards',
+              arguments: doc.id,
+            ),
+            icon: const Icon(Icons.style_rounded, size: 16),
+            label: const Text('Flashcards'),
+            style: ElevatedButton.styleFrom(
+              shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(10)),
+              padding: const EdgeInsets.symmetric(vertical: 10),
+            ),
+          ),
+        ),
+      ],
     );
   }
 
@@ -264,40 +356,7 @@ class _DocumentTile extends ConsumerWidget {
     );
   }
 
-  Widget _buildActions(BuildContext context, WidgetRef ref) {
-    return Row(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        if (doc.isDone)
-          const Icon(Icons.chevron_right_rounded,
-              color: AppTheme.textSecondary),
-        if (!doc.isDone && !doc.isProcessing)
-          IconButton(
-            icon: Icon(
-              doc.hasError
-                  ? Icons.refresh_rounded
-                  : Icons.auto_awesome_rounded,
-              color:
-                  doc.hasError ? AppTheme.error : AppTheme.accent,
-              size: 20,
-            ),
-            tooltip: doc.hasError ? 'Retry' : 'Summarize',
-            onPressed: () => ref
-                .read(documentProvider.notifier)
-                .summarizeDocument(doc.id),
-          ),
-        IconButton(
-          icon: const Icon(Icons.delete_outline_rounded,
-              color: AppTheme.textSecondary, size: 20),
-          tooltip: 'Delete',
-          onPressed: () => _confirmDelete(context, ref),
-        ),
-      ],
-    );
-  }
-
-  Future<void> _confirmDelete(
-      BuildContext context, WidgetRef ref) async {
+  Future<void> _confirmDelete(BuildContext context, WidgetRef ref) async {
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (_) => AlertDialog(
@@ -328,9 +387,7 @@ class _DocumentTile extends ConsumerWidget {
     );
 
     if (confirmed == true) {
-      await ref
-          .read(documentProvider.notifier)
-          .deleteDocument(doc.id);
+      await ref.read(documentProvider.notifier).deleteDocument(doc.id);
     }
   }
 }

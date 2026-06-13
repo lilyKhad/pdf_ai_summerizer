@@ -1,8 +1,8 @@
 import 'dart:convert';
 import 'dart:typed_data';
 import 'package:http/http.dart' as http;
-import 'package:syncfusion_flutter_pdf/pdf.dart' as syncfusion;  // ← add prefix
-import 'package:pdfrx_engine/pdfrx_engine.dart' as pdfrx;        // ← add prefix
+import 'package:pdfrx_engine/pdfrx_engine.dart' as pdfrx;
+import 'package:pdf_summerizer/core/utils/pdf_text_extractor.dart';
 
 abstract class GroqDataSource {
   Future<String> summarizePdf(String fileUrl);
@@ -10,6 +10,7 @@ abstract class GroqDataSource {
 
 class GroqDataSourceImpl implements GroqDataSource {
   final String apiKey;
+  final PdfTextExtractor _pdfExtractor;
 
   // Text model for normal PDFs
   static const _textModel = 'llama-3.3-70b-versatile';
@@ -17,7 +18,10 @@ class GroqDataSourceImpl implements GroqDataSource {
   static const _visionModel = 'meta-llama/llama-4-scout-17b-16e-instruct';
   static const _baseUrl = 'https://api.groq.com/openai/v1/chat/completions';
 
-  GroqDataSourceImpl({required this.apiKey});
+  GroqDataSourceImpl({
+    required this.apiKey,
+    PdfTextExtractor? pdfExtractor,
+  }) : _pdfExtractor = pdfExtractor ?? const PdfTextExtractor();
 
   @override
   Future<String> summarizePdf(String fileUrl) async {
@@ -29,10 +33,10 @@ class GroqDataSourceImpl implements GroqDataSource {
 
     final pdfBytes = fileResponse.bodyBytes;
 
-    // Step 2: Try text extraction first
-    final extractedText = _extractText(pdfBytes);
+    // Step 2: Try text extraction using shared utility
+    final extractedText = _pdfExtractor.extractText(pdfBytes);
 
-    if (extractedText != null && extractedText.trim().length > 50) {
+    if (extractedText != null) {
       // Normal PDF — use text model
       return await _summarizeWithText(extractedText);
     } else {
@@ -42,47 +46,26 @@ class GroqDataSourceImpl implements GroqDataSource {
     }
   }
 
-  // ─── Text Extraction ───────────────────────────────────────────────────────
-
-  String? _extractText(Uint8List pdfBytes) {
-  try {
-    final document = syncfusion.PdfDocument(inputBytes: pdfBytes);
-    final extractor = syncfusion.PdfTextExtractor(document);
-    final buffer = StringBuffer();
-
-    for (int i = 0; i < document.pages.count; i++) {
-      final text = extractor.extractText(startPageIndex: i, endPageIndex: i);
-      buffer.writeln(text);
-    }
-
-    document.dispose();
-    return buffer.toString();
-  } catch (_) {
-    return null;
-  }
-}
-
   // ─── Page Rendering (for scanned PDFs) ────────────────────────────────────
 
-  
+  Future<String> _renderFirstPageAsImage(Uint8List pdfBytes) async {
+    await pdfrx.pdfrxInitialize();
 
-Future<String> _renderFirstPageAsImage(Uint8List pdfBytes) async {
-  await pdfrx.pdfrxInitialize();
+    final document = await pdfrx.PdfDocument.openData(pdfBytes);
+    final page = document.pages[0];
 
-  final document = await pdfrx.PdfDocument.openData(pdfBytes);
-  final page = document.pages[0];
+    final pageImage = await page.render(
+      width: (page.width * 2).toInt(),
+      height: (page.height * 2).toInt(),
+    );
 
-  final pageImage = await page.render(
-    width: (page.width * 2).toInt(),
-    height: (page.height * 2).toInt(),
-  );
+    document.dispose();
 
-  document.dispose();
+    if (pageImage == null) throw Exception('Failed to render PDF page');
 
-  if (pageImage == null) throw Exception('Failed to render PDF page');
+    return base64Encode(pageImage.pixels);
+  }
 
-  return base64Encode(pageImage.pixels);
-}
   // ─── Summarize via Text ────────────────────────────────────────────────────
 
   Future<String> _summarizeWithText(String text) async {
