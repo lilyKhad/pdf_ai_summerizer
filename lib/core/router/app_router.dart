@@ -4,6 +4,7 @@ import 'package:pdf_summerizer/features/auth/presentation/providers/auth_provide
 import 'package:pdf_summerizer/features/auth/presentation/screens/login_screen.dart';
 import 'package:pdf_summerizer/features/auth/presentation/screens/signup_screen.dart';
 import 'package:pdf_summerizer/features/auth/presentation/screens/confirm_email_screen.dart';
+import 'package:pdf_summerizer/features/flashcards/presentation/screens/flashcards_screen.dart';
 import 'package:pdf_summerizer/features/pdf/presentation/screens/home_screen.dart';
 import 'package:pdf_summerizer/features/pdf/presentation/screens/summary_screen.dart';
 
@@ -30,6 +31,12 @@ class AppRouter extends ConsumerWidget {
           final documentId = settings.arguments as String;
           return MaterialPageRoute(
             builder: (_) => SummaryScreen(documentId: documentId),
+          );
+        }
+        if (settings.name == '/flashcards') {
+          final documentId = settings.arguments as String;
+          return MaterialPageRoute(
+            builder: (_) => FlashcardScreen(documentId: documentId),
           );
         }
         return null;
